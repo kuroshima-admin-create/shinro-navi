@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>しんろナビ｜黒島中学校 進路マッチングアプリ</title>
+  <meta name="description" content="竹富町立黒島中学校の生徒向け。沖縄県の高校をアンケートからマッチングし、偏差値・内申点の目安もわかる進路支援アプリです。">
+  <meta name="theme-color" content="#0a1628">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>">
+  
+  <!-- OGP for SNS sharing -->
+  <meta property="og:title" content="しんろナビ｜黒島中学校 進路マッチングアプリ">
+  <meta property="og:description" content="6つの質問に答えるだけ！きみにぴったりの沖縄の高校を見つけよう。偏差値・寮情報・YouTube動画つき。">
+  <meta property="og:type" content="website">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { height: 100%; width: 100%; }
+    body { overflow: hidden; -webkit-font-smoothing: antialiased; }
+    /* PWA風: ステータスバー対応 */
+    @supports (padding-top: env(safe-area-inset-top)) {
+      body { padding-top: env(safe-area-inset-top); }
+    }
+  </style>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── School Database with academic data ──
+const SCHOOLS = [
+  {
+    id: 1, name: "開邦高等学校", area: "南風原町", region: "南部", type: "公立",
+    departments: [
+      { name: "学術探究科", hensachi: 67, naishin: "4.5以上", score: "250/300点" },
+      { name: "芸術科", hensachi: 49, naishin: "3.5以上", score: "180/300点" },
+    ],
+    features: ["進学校", "芸術", "理数系"],
+    dormitory: { name: "青藍寮", capacity: 204, cost: "要確認" },
+    muraboshi: true,
+    description: "県内トップクラスの進学校。中高一貫で学術探究科と芸術科(音楽・美術)を設置。SSH指定校。琉球大43名、早稲田11名など進学実績が高い。",
+    highlights: [
+      "🎓 琉球大学43名・早稲田大11名合格（2025年度）",
+      "🔬 スーパーサイエンスハイスクール(SSH)指定校",
+      "🎵 芸術科は県内唯一の音楽・美術専門学科",
+      "🎤 卒業生にシンガーソングライターCoccoさん",
+    ],
+    clubTypes: ["文化系", "運動系"], academicLevel: 5,
+    tags: ["大学進学", "勉強重視", "芸術", "理系"],
+    url: "http://www.kaiho-h.open.ed.jp/",
+    youtubeQuery: "開邦高校 沖縄 紹介",
+    gradeAdvice: "オール5に近い成績が必要。特に5教科は5を目指そう。",
+  },
+  {
+    id: 2, name: "向陽高等学校", area: "八重瀬町", region: "南部", type: "公立",
+    departments: [
+      { name: "理数科", hensachi: 57, naishin: "4.2以上", score: "220/300点" },
+      { name: "普通科", hensachi: 55, naishin: "4.0以上", score: "210/300点" },
+      { name: "国際文科", hensachi: 53, naishin: "3.8以上", score: "200/300点" },
+    ],
+    features: ["進学校", "理数系", "SSH"],
+    dormitory: { name: "図南寮", capacity: 100, cost: "月額約36,500円" },
+    muraboshi: true,
+    description: "SSH指定校の進学校。理数科・普通科・国際文科の3学科。琉球大61名合格など実績あり。離島出身者も多く在籍。",
+    highlights: [
+      "🎓 琉球大学61名合格（2024年度）",
+      "🔬 スーパーサイエンスハイスクール(SSH)指定校",
+      "💃 ダンス部が県大会優勝経験あり",
+      "🏀 バスケ部が南部大会で活躍",
+    ],
+    clubTypes: ["文化系", "運動系"], academicLevel: 4,
+    tags: ["大学進学", "理系", "科学"],
+    url: "http://www.koyo-h.open.ed.jp/",
+    youtubeQuery: "向陽高校 沖縄 紹介",
+    gradeAdvice: "理数科は4以上の成績が必要。普通科でも3.8以上を目指そう。",
+  },
+  {
+    id: 3, name: "沖縄水産高等学校", area: "糸満市", region: "南部", type: "公立",
+    departments: [
+      { name: "海洋サイエンス科", hensachi: 37, naishin: "2.5以上", score: "120/300点" },
+      { name: "海洋技術科", hensachi: 37, naishin: "2.5以上", score: "120/300点" },
+      { name: "総合学科", hensachi: 37, naishin: "2.5以上", score: "120/300点" },
+    ],
+    features: ["水産・海洋", "実習", "資格取得"],
+    dormitory: { name: "黒潮寮", capacity: 104, cost: "月額約40,000円" },
+    muraboshi: true,
+    description: "創立120年超の海洋系伝統校。実習船での40日間航海実習、水中ドローン全国大会2連覇、マグロ解体ショーなど実践的な学びが充実。",
+    highlights: [
+      "🏆 水中ドローン「マリンロボコン」全国大会2連覇！",
+      "⚾ 甲子園春夏計12回出場（1990・91年夏に2年連続準優勝）",
+      "🚢 実習船で40日間の航海実習（マグロはえ縄漁体験）",
+      "📜 海技士国家試験に全員合格・就職率100%",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 2,
+    tags: ["海・水産", "資格取得", "実習", "就職"],
+    url: "http://www.okisui-h.open.ed.jp/",
+    youtubeQuery: "沖縄水産高校 紹介 実習",
+    gradeAdvice: "通知表で平均3あれば十分チャレンジできる。やる気が大事！",
+  },
+  {
+    id: 4, name: "沖縄工業高等学校", area: "那覇市", region: "中南部", type: "公立",
+    departments: [
+      { name: "情報電子科", hensachi: 43, naishin: "3.2以上", score: "150/300点" },
+      { name: "電子機械科", hensachi: 43, naishin: "3.2以上", score: "150/300点" },
+      { name: "建築科", hensachi: 43, naishin: "3.2以上", score: "150/300点" },
+      { name: "土木科", hensachi: 43, naishin: "3.2以上", score: "150/300点" },
+      { name: "工業化学科", hensachi: 43, naishin: "3.2以上", score: "150/300点" },
+      { name: "生活情報科", hensachi: 38, naishin: "2.8以上", score: "130/300点" },
+    ],
+    features: ["工業系", "資格取得", "ものづくり"],
+    dormitory: { name: "学寮", capacity: 24, cost: "要確認" },
+    muraboshi: true,
+    description: "沖縄を代表する工業高校。多彩な学科で専門技術を学べる。資格取得に力を入れており就職に強い。那覇市内でアクセス良好。",
+    highlights: [
+      "🔧 ものづくりコンテスト全国大会出場実績",
+      "📜 電気工事士・危険物取扱者など多数の資格取得",
+      "💼 就職内定率ほぼ100%の実績",
+      "🏙️ 那覇市内で群星寮からも通いやすい",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 2,
+    tags: ["ものづくり", "資格取得", "就職", "IT・プログラミング"],
+    url: "http://www.okinawa-th.open.ed.jp/",
+    youtubeQuery: "沖縄工業高校 紹介",
+    gradeAdvice: "通知表で平均3〜3.5あれば合格圏。実技教科も頑張ろう。",
+  },
+  {
+    id: 5, name: "北山高等学校", area: "今帰仁村", region: "北部", type: "公立",
+    departments: [
+      { name: "理数科", hensachi: 48, naishin: "3.5以上", score: "180/300点" },
+      { name: "普通科", hensachi: 39, naishin: "2.8以上", score: "130/300点" },
+    ],
+    features: ["自然環境", "理数系"],
+    dormitory: { name: "若鷲寮", capacity: 80, cost: "月額約22,000円" },
+    muraboshi: false,
+    description: "今帰仁村の自然豊かな環境。理数科は少人数で丁寧な指導。寮費が県内最安クラスで経済的。",
+    highlights: [
+      "💰 寮費月額約22,000円は県内最安クラス！",
+      "🔬 理数科で少人数の手厚い指導",
+      "🌺 世界遺産「今帰仁城跡」のすぐそば",
+      "🏃 駅伝・陸上部が北部地区で活躍",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 3,
+    tags: ["自然", "理系", "少人数", "費用抑えたい"],
+    url: "http://www.hokuzan-h.open.ed.jp/",
+    youtubeQuery: "北山高校 沖縄 今帰仁",
+    gradeAdvice: "理数科は3.5、普通科は3あれば大丈夫。費用も安くオススメ。",
+  },
+  {
+    id: 6, name: "名護高等学校", area: "名護市", region: "北部", type: "公立",
+    departments: [
+      { name: "フロンティア科", hensachi: 55, naishin: "4.0以上", score: "210/300点" },
+      { name: "普通科", hensachi: 49, naishin: "3.5以上", score: "180/300点" },
+    ],
+    features: ["総合", "地域連携"],
+    dormitory: { name: "学生寮", capacity: 72, cost: "月額約24,000円" },
+    muraboshi: false,
+    description: "名護市の伝統校。フロンティア科で地域課題解決型の学びが特徴。ダンス部が全国大会出場。部活動も盛ん。",
+    highlights: [
+      "💃 ダンス部が全国大会出場！",
+      "📚 フロンティア科は探究学習が充実",
+      "🏫 名護市の伝統校で地域に根差した教育",
+      "💰 寮費月額約24,000円とリーズナブル",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 3,
+    tags: ["大学進学", "地域貢献", "バランス"],
+    url: "http://www.nago-h.open.ed.jp/",
+    youtubeQuery: "名護高校 沖縄 紹介 ダンス部",
+    gradeAdvice: "フロンティア科は4前後、普通科は3.5前後の成績を目指そう。",
+  },
+  {
+    id: 7, name: "辺土名高等学校", area: "大宜味村", region: "北部", type: "公立",
+    departments: [
+      { name: "普通科", hensachi: 36, naishin: "2.5以上", score: "110/300点" },
+    ],
+    features: ["自然環境", "少人数", "やんばる"],
+    dormitory: { name: "北星寮", capacity: 50, cost: "月額約26,000円" },
+    muraboshi: false,
+    description: "やんばるの大自然に囲まれた少人数校。環境学習が盛んで個室寮あり。アットホームな雰囲気で離島出身者に人気。",
+    highlights: [
+      "🌿 世界自然遺産やんばるの森が学びのフィールド",
+      "🏠 全室個室の北星寮で快適な生活",
+      "🤝 1学年40名前後の少人数でアットホーム",
+      "🌊 離島や県外からの生徒も多数在籍",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 2,
+    tags: ["自然", "少人数", "アットホーム", "環境"],
+    url: "http://www.hentona-h.open.ed.jp/",
+    youtubeQuery: "辺土名高校 沖縄 やんばる",
+    gradeAdvice: "成績に自信がなくてもOK。やる気と自然が好きな気持ちが大切！",
+  },
+  {
+    id: 8, name: "宜野座高等学校", area: "宜野座村", region: "北部", type: "公立",
+    departments: [
+      { name: "普通科", hensachi: 36, naishin: "2.5以上", score: "110/300点" },
+    ],
+    features: ["少人数", "部活動"],
+    dormitory: { name: "青雲寮", capacity: 18, cost: "月額約28,000円" },
+    muraboshi: false,
+    description: "少人数制で面倒見が良い高校。2009年に甲子園ベスト8の快挙。スポーツに力を入れている。",
+    highlights: [
+      "⚾ 2009年春の甲子園でベスト8の快挙！",
+      "🤝 少人数で先生との距離が近い",
+      "⚽ サッカー部・野球部が北部地区で活躍",
+      "🌺 宜野座村の自然豊かな環境",
+    ],
+    clubTypes: ["運動系"], academicLevel: 2,
+    tags: ["スポーツ", "少人数", "アットホーム", "野球"],
+    url: "http://www.ginoza-h.open.ed.jp/",
+    youtubeQuery: "宜野座高校 甲子園 沖縄",
+    gradeAdvice: "成績は問わず。スポーツや学校生活への意欲を見てもらえる。",
+  },
+  {
+    id: 9, name: "沖縄尚学高等学校", area: "那覇市", region: "中南部", type: "私立",
+    departments: [
+      { name: "東大・国公立大医学コース", hensachi: 67, naishin: "4.5以上", score: "私立入試" },
+      { name: "尚学パイオニアα", hensachi: 60, naishin: "4.0以上", score: "私立入試" },
+      { name: "尚学チャレンジャー", hensachi: 57, naishin: "3.8以上", score: "私立入試" },
+      { name: "国際文化科学コース", hensachi: 53, naishin: "3.5以上", score: "私立入試" },
+      { name: "尚学パイオニアβ", hensachi: 48, naishin: "3.0以上", score: "私立入試" },
+    ],
+    features: ["進学校", "国際教育", "空手"],
+    dormitory: { name: "学生寮", capacity: null, cost: "要確認（私立）" },
+    muraboshi: false,
+    description: "県内トップクラスの私立進学校。国際バカロレア認定校で英語教育充実。甲子園春夏優勝実績。空手が全国レベル。",
+    highlights: [
+      "⚾ 甲子園で春夏ともに優勝経験あり！",
+      "🌏 国際バカロレア(IB)認定校で世界に通じる教育",
+      "🥋 空手部が全国大会で常に上位",
+      "🎓 東大・医学部への合格者を輩出",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 5,
+    tags: ["大学進学", "英語・国際", "空手", "私立"],
+    url: "https://www.okisho.ed.jp/",
+    youtubeQuery: "沖縄尚学 高校 紹介",
+    gradeAdvice: "コースにより幅広い。βコースなら3.0から挑戦可能。",
+  },
+  {
+    id: 10, name: "那覇商業高等学校", area: "那覇市", region: "中南部", type: "公立",
+    departments: [
+      { name: "情報処理科", hensachi: 45, naishin: "3.3以上", score: "165/300点" },
+      { name: "国際経済科", hensachi: 45, naishin: "3.3以上", score: "165/300点" },
+      { name: "商業科", hensachi: 40, naishin: "3.0以上", score: "140/300点" },
+    ],
+    features: ["商業系", "資格取得"],
+    dormitory: null, muraboshi: true,
+    description: "商業系の伝統校。簿記・プログラミングなどの資格取得率が高い。ゆいレール県庁前駅から徒歩5分でアクセス抜群。",
+    highlights: [
+      "📜 簿記検定・プログラミング検定の取得率が非常に高い",
+      "🚃 ゆいレール県庁前駅から徒歩5分の好立地",
+      "💼 就職率・進学率ともに安定した実績",
+      "⭐ 群星寮から徒歩圏内で離島生に便利",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 3,
+    tags: ["資格取得", "ビジネス", "就職", "IT・プログラミング"],
+    url: "http://www.nahasyou-h.open.ed.jp/",
+    youtubeQuery: "那覇商業高校 紹介",
+    gradeAdvice: "情報処理科は3.3、商業科は3.0が目安。検定に強い！",
+  },
+  {
+    id: 11, name: "首里高等学校", area: "那覇市", region: "中南部", type: "公立",
+    departments: [
+      { name: "普通科", hensachi: 55, naishin: "4.0以上", score: "210/300点" },
+      { name: "染織デザイン科", hensachi: 43, naishin: "3.0以上", score: "150/300点" },
+    ],
+    features: ["伝統校", "進学校"],
+    dormitory: null, muraboshi: true,
+    description: "創立140年超の県内最古の伝統校。首里城のすぐ近く。染織デザイン科は県内唯一。なぎなた部は全国レベル。",
+    highlights: [
+      "🏯 創立142年！首里城跡のすぐそばの伝統校",
+      "🎨 県内唯一の染織デザイン科で琉球の伝統工芸を学べる",
+      "🥋 なぎなた競技が全国レベル",
+      "🎓 国公立大学への進学実績あり",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 4,
+    tags: ["大学進学", "伝統", "バランス", "デザイン・アート"],
+    url: "http://www.shuri-h.open.ed.jp/",
+    youtubeQuery: "首里高校 沖縄 紹介",
+    gradeAdvice: "普通科は4.0、染織デザイン科は3.0が目安。",
+  },
+  {
+    id: 12, name: "那覇高等学校", area: "那覇市", region: "中南部", type: "公立",
+    departments: [
+      { name: "普通科", hensachi: 54, naishin: "3.8以上", score: "200/300点" },
+    ],
+    features: ["伝統校", "進学校"],
+    dormitory: null, muraboshi: true,
+    description: "那覇市中心部の進学校。交通の便が良く文武両道の校風。群星寮からのアクセスも良好。",
+    highlights: [
+      "🏙️ 那覇市中心部で交通アクセス抜群",
+      "📚 文武両道で部活も進学も充実",
+      "⭐ 群星寮からの通学に便利",
+      "🎓 国公立大学への合格者を毎年輩出",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 4,
+    tags: ["大学進学", "バランス", "伝統"],
+    url: "http://www.naha-h.open.ed.jp/",
+    youtubeQuery: "那覇高校 沖縄 紹介",
+    gradeAdvice: "通知表で平均3.8〜4.0を目指そう。5教科をバランスよく。",
+  },
+  {
+    id: 13, name: "浦添工業高等学校", area: "浦添市", region: "中南部", type: "公立",
+    departments: [
+      { name: "調理科", hensachi: 42, naishin: "3.0以上", score: "145/300点" },
+      { name: "デザイン科", hensachi: 39, naishin: "2.8以上", score: "130/300点" },
+      { name: "インテリア科", hensachi: 39, naishin: "2.8以上", score: "130/300点" },
+      { name: "建築科", hensachi: 39, naishin: "2.8以上", score: "130/300点" },
+      { name: "情報技術科", hensachi: 39, naishin: "2.8以上", score: "130/300点" },
+    ],
+    features: ["工業系", "調理", "デザイン"],
+    dormitory: null, muraboshi: true,
+    description: "調理科やデザイン科などクリエイティブな学科が充実。実践的な技術が身につく。群星寮から通学可能。",
+    highlights: [
+      "🍳 調理科でプロの技術を高校から学べる",
+      "🎨 デザイン科でグラフィック・空間デザインを学習",
+      "🏠 インテリア科は沖縄の住環境を学ぶ",
+      "💻 情報技術科でプログラミングの基礎を習得",
+    ],
+    clubTypes: ["文化系", "運動系"], academicLevel: 2,
+    tags: ["料理", "デザイン・アート", "ものづくり", "資格取得"],
+    url: "http://www.urasoe-th.open.ed.jp/",
+    youtubeQuery: "浦添工業高校 沖縄 調理科",
+    gradeAdvice: "調理科は3.0、その他は2.8が目安。実技や意欲が評価される。",
+  },
+  {
+    id: 14, name: "沖縄工業高等専門学校", area: "名護市", region: "北部", type: "国立",
+    departments: [
+      { name: "機械システム工学科", hensachi: 61, naishin: "4.2以上", score: "独自入試" },
+      { name: "情報通信システム工学科", hensachi: 61, naishin: "4.2以上", score: "独自入試" },
+      { name: "メディア情報工学科", hensachi: 61, naishin: "4.2以上", score: "独自入試" },
+      { name: "生物資源工学科", hensachi: 61, naishin: "4.2以上", score: "独自入試" },
+    ],
+    features: ["高専", "5年制", "専門技術"],
+    dormitory: { name: "学生寮", capacity: 540, cost: "要確認" },
+    muraboshi: false,
+    description: "5年一貫の国立高等専門学校。高度な技術教育。大手企業への就職や大学編入も可能。全国最大級540名の寮を完備。",
+    highlights: [
+      "🏆 ロボコン全国大会の常連校！",
+      "💼 トヨタ・ソニーなど大手企業への就職実績",
+      "🎓 琉球大・九州大など国立大への3年次編入が可能",
+      "🏠 540名収容の充実した学生寮",
+    ],
+    clubTypes: ["文化系", "運動系"], academicLevel: 4,
+    tags: ["IT・プログラミング", "ものづくり", "理系", "大学進学", "就職"],
+    url: "https://www.okinawa-ct.ac.jp/",
+    youtubeQuery: "沖縄高専 紹介 ロボコン",
+    gradeAdvice: "オール4以上が目安。数学・理科が特に重要。独自入試あり。",
+  },
+  {
+    id: 15, name: "小禄高等学校", area: "那覇市", region: "中南部", type: "公立",
+    departments: [
+      { name: "普通科（普通コース）", hensachi: 48, naishin: "3.5以上", score: "175/300点" },
+      { name: "普通科（芸術教養コース）", hensachi: 47, naishin: "3.3以上", score: "170/300点" },
+      { name: "普通科（情報ビジネスコース）", hensachi: 47, naishin: "3.3以上", score: "170/300点" },
+    ],
+    features: ["芸術", "情報"],
+    dormitory: null, muraboshi: true,
+    description: "普通科内に芸術教養・情報ビジネスの各コース。多様な進路に対応。空港に近くアクセス良好。",
+    highlights: [
+      "🎨 芸術教養コースで美術・書道を深く学べる",
+      "💻 情報ビジネスコースでIT・ビジネスを学習",
+      "✈️ 那覇空港に近くアクセス良好",
+      "⭐ 群星寮から通学可能",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 3,
+    tags: ["芸術", "ビジネス", "バランス"],
+    url: "http://www.oroku-h.open.ed.jp/",
+    youtubeQuery: "小禄高校 沖縄 紹介",
+    gradeAdvice: "通知表で平均3.3〜3.5を目指そう。",
+  },
+  {
+    id: 16, name: "八重山高等学校", area: "石垣市", region: "八重山", type: "公立",
+    departments: [
+      { name: "普通科", hensachi: 42, naishin: "3.0以上", score: "145/300点" },
+    ],
+    features: ["地元", "伝統校"],
+    dormitory: null, muraboshi: false,
+    description: "石垣島の伝統校。黒島から最も近い高校のひとつ。地元の友人と一緒に通える。文武両道の校風。",
+    highlights: [
+      "🏝️ 黒島から石垣島へ船で通学圏内",
+      "🏫 八重山地域の伝統ある普通高校",
+      "⚾ 野球部・サッカー部など部活動が盛ん",
+      "🎓 琉球大学などへの進学者あり",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 3,
+    tags: ["地元に近い", "バランス", "伝統"],
+    url: "http://www.yaeyama-h.open.ed.jp/",
+    youtubeQuery: "八重山高校 石垣島 紹介",
+    gradeAdvice: "通知表3.0が目安。地元で安心して学べる。",
+  },
+  {
+    id: 17, name: "八重山商工高等学校", area: "石垣市", region: "八重山", type: "公立",
+    departments: [
+      { name: "商業科", hensachi: 38, naishin: "2.8以上", score: "125/300点" },
+      { name: "情報技術科", hensachi: 38, naishin: "2.8以上", score: "125/300点" },
+      { name: "機械電気科", hensachi: 38, naishin: "2.8以上", score: "125/300点" },
+    ],
+    features: ["商工系", "資格取得"],
+    dormitory: { name: "学寮", capacity: null, cost: "要確認" },
+    muraboshi: false,
+    description: "石垣島の商工系高校。甲子園出場経験あり。資格取得と部活に力を入れている。地元から通いやすい。",
+    highlights: [
+      "⚾ 2006年春の甲子園でベスト4の大活躍！",
+      "💼 商業・情報・機械電気の3学科で資格取得",
+      "🏝️ 地元石垣から通える商工系高校",
+      "🏆 野球部・バスケ部など部活動が盛ん",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 2,
+    tags: ["地元に近い", "資格取得", "スポーツ", "IT・プログラミング"],
+    url: "http://www.yaeyama-th.open.ed.jp/",
+    youtubeQuery: "八重山商工 甲子園 石垣島",
+    gradeAdvice: "通知表2.8以上が目安。スポーツ推薦も充実。",
+  },
+  {
+    id: 18, name: "八重山農林高等学校", area: "石垣市", region: "八重山", type: "公立",
+    departments: [
+      { name: "アグリフード科", hensachi: 36, naishin: "2.5以上", score: "110/300点" },
+      { name: "グリーンライフ科", hensachi: 36, naishin: "2.5以上", score: "110/300点" },
+      { name: "フードプロデュース科", hensachi: 36, naishin: "2.5以上", score: "110/300点" },
+      { name: "ライフスキル科", hensachi: 36, naishin: "2.5以上", score: "110/300点" },
+    ],
+    features: ["農業系", "食品", "自然"],
+    dormitory: { name: "寄宿舎", capacity: 16, cost: "要確認" },
+    muraboshi: false,
+    description: "農業・食品系の専門校。石垣の自然を活かした実践教育。地元食材の商品開発など体験的学びが充実。",
+    highlights: [
+      "🌱 石垣島の大自然で農業・園芸を実践学習",
+      "🍳 フードプロデュース科で地元食材の商品開発",
+      "🐄 畜産・酪農も学べる貴重な環境",
+      "🏝️ 黒島から石垣島へ通学可能",
+    ],
+    clubTypes: ["文化系", "運動系"], academicLevel: 2,
+    tags: ["地元に近い", "自然", "農業・食品", "実習"],
+    url: "http://www.yaeyama-ah.open.ed.jp/",
+    youtubeQuery: "八重山農林高校 石垣島",
+    gradeAdvice: "意欲があれば大丈夫。実習で頑張る姿勢を見てくれる。",
+  },
+  {
+    id: 19, name: "興南高等学校", area: "那覇市", region: "中南部", type: "私立",
+    departments: [
+      { name: "特別進学コース", hensachi: 53, naishin: "3.5以上", score: "私立入試" },
+      { name: "総合進学コース", hensachi: 49, naishin: "3.0以上", score: "私立入試" },
+    ],
+    features: ["進学校", "スポーツ"],
+    dormitory: null, muraboshi: true,
+    description: "甲子園春夏連覇の名門校。文武両道で進学実績も向上中。群星寮から通学可能。",
+    highlights: [
+      "⚾ 2010年に甲子園春夏連覇を達成！沖縄県勢初の偉業",
+      "🥊 ボクシング部・柔道部なども全国レベル",
+      "🎓 進学コースで国公立大学合格者を輩出",
+      "⭐ 群星寮から通学可能",
+    ],
+    clubTypes: ["運動系", "文化系"], academicLevel: 4,
+    tags: ["スポーツ", "大学進学", "私立", "野球"],
+    url: "https://www.konan-h.ed.jp/",
+    youtubeQuery: "興南高校 沖縄 甲子園 春夏連覇",
+    gradeAdvice: "特進は3.5以上、総合進学は3.0から挑戦可能。",
+  },
+];
+
+const QUESTIONS = [
+  {
+    id: "interest", question: "どんなことに興味がある？", subtitle: "いくつでも選んでOK！", multi: true,
+    options: [
+      { label: "勉強・大学進学", icon: "📚", value: "大学進学" },
+      { label: "海・水産・自然", icon: "🌊", value: "海・水産" },
+      { label: "IT・プログラミング", icon: "💻", value: "IT・プログラミング" },
+      { label: "スポーツ", icon: "⚽", value: "スポーツ" },
+      { label: "ものづくり・工業", icon: "🔧", value: "ものづくり" },
+      { label: "料理・食品", icon: "🍳", value: "料理" },
+      { label: "デザイン・アート", icon: "🎨", value: "デザイン・アート" },
+      { label: "英語・国際交流", icon: "🌏", value: "英語・国際" },
+      { label: "ビジネス・商業", icon: "💼", value: "ビジネス" },
+      { label: "農業・畜産", icon: "🌱", value: "農業・食品" },
+    ],
+  },
+  {
+    id: "future", question: "将来どうしたい？", subtitle: "一番近いものを選んでね", multi: false,
+    options: [
+      { label: "大学に進学したい", icon: "🎓", value: "university" },
+      { label: "専門学校に行きたい", icon: "📖", value: "vocational" },
+      { label: "手に職をつけて就職したい", icon: "🏢", value: "job" },
+      { label: "まだ決めてない", icon: "🤔", value: "undecided" },
+    ],
+  },
+  {
+    id: "grades", question: "いまの通知表の成績は？", subtitle: "だいたいの平均で大丈夫！正直に答えてね", multi: false,
+    options: [
+      { label: "ほとんど5（4.5以上）", icon: "🌟", value: "5" },
+      { label: "4と5が多い（3.8〜4.4）", icon: "⭐", value: "4" },
+      { label: "3と4が多い（3.0〜3.7）", icon: "✨", value: "3" },
+      { label: "2と3が多い（2.9以下）", icon: "💪", value: "2" },
+    ],
+  },
+  {
+    id: "location", question: "どのエリアに行きたい？", subtitle: "希望のエリアを選んでね", multi: true,
+    options: [
+      { label: "石垣島（地元に近い）", icon: "🏝️", value: "八重山" },
+      { label: "那覇・南部", icon: "🏙️", value: "中南部" },
+      { label: "北部（名護・やんばる）", icon: "🌿", value: "北部" },
+      { label: "どこでもOK", icon: "✨", value: "any" },
+    ],
+  },
+  {
+    id: "dormitory", question: "住まいはどうしたい？", subtitle: "寮の希望を教えてね", multi: false,
+    options: [
+      { label: "学校の寮に入りたい", icon: "🏠", value: "school_dorm" },
+      { label: "群星寮に入りたい（那覇）", icon: "⭐", value: "muraboshi" },
+      { label: "どちらでもいい", icon: "👌", value: "any" },
+      { label: "石垣から通いたい", icon: "🚢", value: "local" },
+    ],
+  },
+  {
+    id: "style", question: "どんな学校生活がいい？", subtitle: "いくつでも選んでOK！", multi: true,
+    options: [
+      { label: "勉強をがんばりたい", icon: "✏️", value: "study" },
+      { label: "部活をがんばりたい", icon: "🏆", value: "club" },
+      { label: "資格をたくさん取りたい", icon: "📜", value: "license" },
+      { label: "少人数でアットホーム", icon: "🤝", value: "small" },
+      { label: "実習・体験を多くしたい", icon: "🔬", value: "practice" },
+      { label: "費用をなるべく抑えたい", icon: "💰", value: "lowcost" },
+    ],
+  },
+];
+
+function calculateMatch(school, answers) {
+  let score = 0, maxScore = 0, reasons = [];
+  maxScore += 30;
+  if (answers.interest?.length) {
+    const m = school.tags.filter(t => answers.interest.includes(t));
+    if (m.length > 0) { score += Math.min(30, (m.length / answers.interest.length) * 30 + m.length * 5); reasons.push(`${m.join("・")}に関する学び`); }
+  }
+  maxScore += 25;
+  if (answers.future) {
+    if (answers.future === "university" && school.academicLevel >= 4) { score += 25; reasons.push("大学進学に強い"); }
+    else if (answers.future === "university" && school.academicLevel === 3) score += 15;
+    else if (answers.future === "job" && school.tags.includes("資格取得")) { score += 25; reasons.push("資格取得・就職に強い"); }
+    else if (answers.future === "job" && school.tags.includes("就職")) score += 20;
+    else if (answers.future === "vocational" && (school.tags.includes("資格取得") || school.academicLevel >= 3)) { score += 20; reasons.push("専門分野の学びが充実"); }
+    else if (answers.future === "undecided" && school.tags.includes("バランス")) { score += 20; reasons.push("幅広い進路選択が可能"); }
+    else score += 10;
+  }
+  maxScore += 20;
+  if (answers.grades) {
+    const minH = Math.min(...school.departments.map(d => d.hensachi));
+    const fits = (answers.grades === "5" && minH >= 36) || (answers.grades === "4" && minH <= 61) || (answers.grades === "3" && minH <= 55) || (answers.grades === "2" && minH <= 42);
+    const challenge = (answers.grades === "4" && minH >= 55) || (answers.grades === "3" && minH >= 45) || (answers.grades === "2" && minH >= 38);
+    if (fits && !challenge) { score += 20; reasons.push("今の成績で合格圏内"); }
+    else if (fits && challenge) { score += 15; reasons.push("頑張り次第で合格できる"); }
+    else if (!fits) { score += 5; }
+  }
+  maxScore += 20;
+  if (answers.location?.length) {
+    if (answers.location.includes("any")) score += 15;
+    else if (answers.location.includes(school.region)) { score += 20; reasons.push(`希望エリア（${school.region}）`); }
+    else if (school.region === "南部" && answers.location.includes("中南部")) score += 18;
+  }
+  maxScore += 15;
+  if (answers.dormitory) {
+    if (answers.dormitory === "school_dorm" && school.dormitory) { score += 15; reasons.push(`学校寮「${school.dormitory.name}」あり`); }
+    else if (answers.dormitory === "muraboshi" && school.muraboshi) { score += 15; reasons.push("群星寮から通学可能"); }
+    else if (answers.dormitory === "any" && (school.dormitory || school.muraboshi)) { score += 13; if (school.dormitory) reasons.push(`寮「${school.dormitory.name}」あり`); else reasons.push("群星寮から通学可能"); }
+    else if (answers.dormitory === "local" && school.region === "八重山") { score += 15; reasons.push("石垣島から通える"); }
+    else if (school.dormitory || school.muraboshi) score += 5;
+  }
+  maxScore += 10;
+  if (answers.style?.length) {
+    let s = 0;
+    if (answers.style.includes("study") && school.academicLevel >= 4) s += 4;
+    if (answers.style.includes("club") && school.clubTypes.includes("運動系")) s += 3;
+    if (answers.style.includes("license") && school.tags.includes("資格取得")) { s += 4; if (!reasons.some(r => r.includes("資格"))) reasons.push("資格取得に力を入れている"); }
+    if (answers.style.includes("small") && school.tags.includes("少人数")) { s += 4; reasons.push("少人数でアットホーム"); }
+    if (answers.style.includes("practice") && school.tags.includes("実習")) { s += 4; reasons.push("実習・体験学習が充実"); }
+    if (answers.style.includes("lowcost") && school.type === "公立" && school.dormitory && school.dormitory.cost && school.dormitory.cost.includes("22")) s += 4;
+    else if (answers.style.includes("lowcost") && school.type === "公立") s += 2;
+    score += Math.min(10, s);
+  }
+  return { score, percentage: Math.min(99, Math.max(12, Math.round((score / maxScore) * 100))), reasons: reasons.slice(0, 4) };
+}
+
+function getGradeColor(h) {
+  if (h >= 55) return { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.4)", text: "#f87171", label: "チャレンジ" };
+  if (h >= 45) return { bg: "rgba(251,191,36,0.15)", border: "rgba(251,191,36,0.4)", text: "#fbbf24", label: "標準" };
+  return { bg: "rgba(52,211,153,0.15)", border: "rgba(52,211,153,0.4)", text: "#34d399", label: "入りやすい" };
+}
+
+const card = { background: "rgba(255,255,255,0.07)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "20px" };
+
+window.App = function App() {
+  const [screen, setScreen] = useState("welcome");
+  const [currentQ, setCurrentQ] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [results, setResults] = useState([]);
+  const [fadeIn, setFadeIn] = useState(true);
+  const [showDetail, setShowDetail] = useState(null);
+  const ref = useRef(null);
+
+  const transition = (fn) => { setFadeIn(false); setTimeout(() => { fn(); setFadeIn(true); }, 280); };
+  const handleSelect = (qId, value, multi) => {
+    setAnswers(prev => {
+      if (multi) { const c = prev[qId] || []; return { ...prev, [qId]: c.includes(value) ? c.filter(v => v !== value) : [...c, value] }; }
+      return { ...prev, [qId]: value };
+    });
+  };
+  const nextQuestion = () => {
+    const q = QUESTIONS[currentQ];
+    if (q.multi && (!answers[q.id] || answers[q.id].length === 0)) return;
+    if (!q.multi && !answers[q.id]) return;
+    if (currentQ < QUESTIONS.length - 1) transition(() => setCurrentQ(p => p + 1));
+    else { const s = SCHOOLS.map(s => ({ ...s, match: calculateMatch(s, answers) })).sort((a, b) => b.match.percentage - a.match.percentage); transition(() => { setResults(s); setScreen("result"); }); }
+  };
+  const prevQuestion = () => { if (currentQ > 0) transition(() => setCurrentQ(p => p - 1)); };
+  const restart = () => transition(() => { setScreen("welcome"); setCurrentQ(0); setAnswers({}); setResults([]); setShowDetail(null); });
+
+  useEffect(() => { if (ref.current) ref.current.scrollTo({ top: 0, behavior: "smooth" }); }, [screen, currentQ, showDetail]);
+
+  const btnStyle = (sel) => ({
+    display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 14,
+    border: sel ? "2px solid #2ec4b6" : "2px solid rgba(255,255,255,0.1)",
+    background: sel ? "rgba(46,196,182,0.15)" : "rgba(255,255,255,0.04)",
+    color: sel ? "#fff" : "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: sel ? 600 : 400,
+    cursor: "pointer", textAlign: "left", transition: "all 0.2s", fontFamily: "'Noto Sans JP', sans-serif",
+  });
+
+  return (
+    <div style={{ position: "relative", minHeight: "100vh", fontFamily: "'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet" />
+      {/* BG */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(175deg, #0a1628 0%, #0f2847 30%, #134e6f 55%, #1a7fa0 75%, #2ec4b6 100%)" }} />
+        <svg style={{ position: "absolute", bottom: 0, width: "100%", height: "40%" }} viewBox="0 0 1440 400" preserveAspectRatio="none">
+          <path d="M0,240 C360,320 720,160 1080,240 C1260,280 1380,300 1440,280 L1440,400 L0,400Z" fill="rgba(46,196,182,0.15)"><animate attributeName="d" dur="8s" repeatCount="indefinite" values="M0,240 C360,320 720,160 1080,240 C1260,280 1380,300 1440,280 L1440,400 L0,400Z;M0,260 C360,180 720,320 1080,220 C1260,260 1380,280 1440,300 L1440,400 L0,400Z;M0,240 C360,320 720,160 1080,240 C1260,280 1380,300 1440,280 L1440,400 L0,400Z" /></path>
+        </svg>
+        <style>{`@keyframes twinkle{0%,100%{opacity:.2;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}} @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
+        {[...Array(10)].map((_, i) => <div key={i} style={{ position: "absolute", width: `${2+Math.random()*3}px`, height: `${2+Math.random()*3}px`, borderRadius: "50%", background: "rgba(255,255,255,0.4)", left: `${Math.random()*100}%`, top: `${Math.random()*60}%`, animation: `twinkle ${2+Math.random()*3}s ease-in-out infinite`, animationDelay: `${Math.random()*3}s` }} />)}
+      </div>
+
+      <div ref={ref} style={{ position: "relative", zIndex: 1, minHeight: "100vh", overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ width: "100%", maxWidth: 580, opacity: fadeIn ? 1 : 0, transform: fadeIn ? "translateY(0)" : "translateY(12px)", transition: "opacity 0.3s ease, transform 0.3s ease" }}>
+
+          {/* WELCOME */}
+          {screen === "welcome" && (
+            <div style={{ textAlign: "center", paddingTop: "8vh" }}>
+              <div style={{ fontSize: 64, marginBottom: 8, animation: "float 3s ease-in-out infinite" }}>🏝️</div>
+              <h1 style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: "clamp(24px,6vw,36px)", fontWeight: 900, color: "#fff", lineHeight: 1.4, marginBottom: 6, textShadow: "0 2px 20px rgba(0,0,0,0.3)" }}>しんろナビ</h1>
+              <p style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: "clamp(13px,3.5vw,16px)", color: "rgba(255,255,255,0.7)", marginBottom: 28, lineHeight: 1.6 }}>黒島中学校のみんなへ<br />きみにぴったりの高校を見つけよう！</p>
+              <div style={{ ...card, padding: "24px 20px", marginBottom: 24, textAlign: "left", color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 1.8 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: "#2ec4b6", marginBottom: 8, fontFamily: "'Zen Maru Gothic',sans-serif" }}>⭐ パワーアップした新機能</div>
+                <div style={{ marginBottom: 6 }}>📊 <strong>偏差値・内申点の目安</strong>がわかる！</div>
+                <div style={{ marginBottom: 6 }}>🎯 <strong>成績に合った目標設定</strong>ができる！</div>
+                <div style={{ marginBottom: 6 }}>🎬 <strong>YouTube動画</strong>で学校の雰囲気を確認！</div>
+                <div>🏆 各校の<strong>活躍・ハイライト</strong>を紹介！</div>
+              </div>
+              <button onClick={() => transition(() => setScreen("quiz"))} style={{ background: "linear-gradient(135deg,#2ec4b6,#17a398)", color: "#fff", border: "none", borderRadius: 60, padding: "16px 48px", fontSize: 18, fontWeight: 700, fontFamily: "'Zen Maru Gothic',sans-serif", cursor: "pointer", boxShadow: "0 4px 24px rgba(46,196,182,0.4)", transition: "transform 0.2s" }} onMouseEnter={e => e.target.style.transform = "scale(1.05)"} onMouseLeave={e => e.target.style.transform = "scale(1)"}>診断スタート 🚀</button>
+              <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 24 }}>竹富町立黒島中学校 進路支援アプリ</p>
+            </div>
+          )}
+
+          {/* QUIZ */}
+          {screen === "quiz" && (
+            <div style={{ paddingTop: 16 }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 500 }}>質問 {currentQ+1} / {QUESTIONS.length}</span>
+                  <span style={{ color: "#2ec4b6", fontSize: 13, fontWeight: 700 }}>{Math.round(((currentQ+1)/QUESTIONS.length)*100)}%</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#2ec4b6,#17a398)", width: `${((currentQ+1)/QUESTIONS.length)*100}%`, transition: "width 0.5s" }} />
+                </div>
+              </div>
+              <div style={{ ...card, padding: "28px 20px", marginBottom: 20 }}>
+                <h2 style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: "clamp(18px,5vw,24px)", fontWeight: 900, color: "#fff", marginBottom: 6, lineHeight: 1.4 }}>{QUESTIONS[currentQ].question}</h2>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginBottom: 20 }}>{QUESTIONS[currentQ].subtitle}</p>
+                <div style={{ display: "grid", gridTemplateColumns: QUESTIONS[currentQ].options.length <= 4 ? "1fr" : "1fr 1fr", gap: 10 }}>
+                  {QUESTIONS[currentQ].options.map(opt => {
+                    const q = QUESTIONS[currentQ];
+                    const sel = q.multi ? (answers[q.id]||[]).includes(opt.value) : answers[q.id] === opt.value;
+                    return <button key={opt.value} onClick={() => handleSelect(q.id, opt.value, q.multi)} style={btnStyle(sel)}>
+                      <span style={{ fontSize: 22, flexShrink: 0 }}>{opt.icon}</span><span>{opt.label}</span>{sel && <span style={{ marginLeft: "auto", color: "#2ec4b6", fontSize: 16 }}>✓</span>}
+                    </button>;
+                  })}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={prevQuestion} disabled={currentQ === 0} style={{ flex: 1, padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", fontSize: 15, fontWeight: 600, cursor: currentQ === 0 ? "default" : "pointer", opacity: currentQ === 0 ? 0.3 : 1, fontFamily: "'Noto Sans JP',sans-serif" }}>← もどる</button>
+                <button onClick={nextQuestion} style={{ flex: 2, padding: 14, borderRadius: 14, border: "none", background: "linear-gradient(135deg,#2ec4b6,#17a398)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(46,196,182,0.3)", fontFamily: "'Noto Sans JP',sans-serif" }}>{currentQ === QUESTIONS.length-1 ? "結果を見る ✨" : "つぎへ →"}</button>
+              </div>
+            </div>
+          )}
+
+          {/* RESULTS LIST */}
+          {screen === "result" && !showDetail && (
+            <div style={{ paddingTop: 16, paddingBottom: 40 }}>
+              <div style={{ textAlign: "center", marginBottom: 28 }}>
+                <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
+                <h2 style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: "clamp(20px,5vw,28px)", fontWeight: 900, color: "#fff", marginBottom: 6 }}>きみへのオススメ高校</h2>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>タップすると偏差値・目標成績・動画が見られるよ</p>
+              </div>
+              {results.slice(0, 8).map((school, idx) => {
+                const topDept = school.departments[0];
+                const gc = getGradeColor(topDept.hensachi);
+                return (
+                  <button key={school.id} onClick={() => transition(() => setShowDetail(school))} style={{ ...card, width: "100%", padding: "18px", marginBottom: 14, cursor: "pointer", textAlign: "left", position: "relative", overflow: "hidden", border: idx === 0 ? "2px solid rgba(46,196,182,0.5)" : "1px solid rgba(255,255,255,0.1)", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "scale(1.01)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+                    {idx === 0 && <div style={{ position: "absolute", top: 12, right: 12, background: "linear-gradient(135deg,#f7b731,#f5a623)", color: "#000", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20 }}>🏆 BEST MATCH</div>}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, background: `conic-gradient(#2ec4b6 ${school.match.percentage*3.6}deg, rgba(255,255,255,0.08) 0deg)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(10,22,40,0.9)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+                          <span style={{ color: "#2ec4b6", fontSize: 16, fontWeight: 900, lineHeight: 1 }}>{school.match.percentage}</span>
+                          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 8 }}>%</span>
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 8, background: school.type === "私立" ? "rgba(247,183,49,0.2)" : school.type === "国立" ? "rgba(168,85,247,0.2)" : "rgba(46,196,182,0.15)", color: school.type === "私立" ? "#f7b731" : school.type === "国立" ? "#a855f7" : "#2ec4b6", fontWeight: 600 }}>{school.type}</span>
+                          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{school.area}</span>
+                          <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 8, background: gc.bg, border: `1px solid ${gc.border}`, color: gc.text, fontWeight: 600 }}>偏差値{topDept.hensachi}</span>
+                        </div>
+                        <h3 style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 4 }}>{school.name}</h3>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>{school.highlights[0]}</div>
+                        <div style={{ color: "rgba(46,196,182,0.7)", fontSize: 11, fontWeight: 500 }}>タップして詳細・目標成績・動画を見る →</div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              <div style={{ ...card, padding: "20px", marginTop: 20, border: "1px solid rgba(255,215,0,0.2)", background: "rgba(255,215,0,0.05)" }}>
+                <div style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: 15, fontWeight: 700, color: "#f7b731", marginBottom: 8 }}>⭐ 群星（むるぶし）寮について</div>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.8 }}>那覇市にある離島生徒のための寮（定員120名）。中南部の高校に通学可能。毎年8〜10月ごろ竹富町教育委員会を通じて募集。月額約37,300円。</p>
+              </div>
+              <button onClick={restart} style={{ marginTop: 20, width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Noto Sans JP',sans-serif" }}>🔄 もう一度やり直す</button>
+            </div>
+          )}
+
+          {/* DETAIL */}
+          {screen === "result" && showDetail && (
+            <div style={{ paddingTop: 16, paddingBottom: 40 }}>
+              <button onClick={() => transition(() => setShowDetail(null))} style={{ background: "none", border: "none", color: "#2ec4b6", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 16, padding: 0, fontFamily: "'Noto Sans JP',sans-serif" }}>← 一覧にもどる</button>
+              <div style={{ ...card, padding: "28px 22px", marginBottom: 16 }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(46,196,182,0.12)", borderRadius: 20, padding: "6px 14px", marginBottom: 16 }}>
+                  <span style={{ color: "#2ec4b6", fontWeight: 900, fontSize: 22 }}>{showDetail.match.percentage}%</span>
+                  <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>マッチ</span>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, background: showDetail.type === "私立" ? "rgba(247,183,49,0.2)" : showDetail.type === "国立" ? "rgba(168,85,247,0.2)" : "rgba(46,196,182,0.15)", color: showDetail.type === "私立" ? "#f7b731" : showDetail.type === "国立" ? "#a855f7" : "#2ec4b6", fontWeight: 600 }}>{showDetail.type}</span>
+                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>📍 {showDetail.area}</span>
+                </div>
+                <h2 style={{ fontFamily: "'Zen Maru Gothic',sans-serif", fontSize: "clamp(22px,5vw,28px)", fontWeight: 900, color: "#fff", marginBottom: 12, lineHeight: 1.3 }}>{showDetail.name}</h2>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.8, marginBottom: 20 }}>{showDetail.description}</p>
+
+                {/* 📊 Academic Requirements */}
+                <div style={{ background: "rgba(99,102,241,0.08)", borderRadius: 16, padding: 18, marginBottom: 20, border: "1px solid rgba(99,102,241,0.2)" }}>
+                  <h3 style={{ color: "#818cf8", fontSize: 15, fontWeight: 700, marginBottom: 12, fontFamily: "'Zen Maru Gothic',sans-serif" }}>📊 合格に必要な成績の目安</h3>
+                  {showDetail.departments.map((d, i) => {
+                    const gc = getGradeColor(d.hensachi);
+                    return (
+                      <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "12px 14px", marginBottom: i < showDetail.departments.length - 1 ? 10 : 0, border: `1px solid ${gc.border}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{d.name}</span>
+                          <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 8, background: gc.bg, color: gc.text, fontWeight: 700 }}>{gc.label}</span>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 2 }}>偏差値</div>
+                            <div style={{ color: gc.text, fontSize: 20, fontWeight: 900 }}>{d.hensachi}</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 2 }}>内申点</div>
+                            <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{d.naishin}</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 2 }}>本番得点</div>
+                            <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{d.score}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(129,140,248,0.1)", borderRadius: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, lineHeight: 1.7 }}>
+                    💡 <strong>アドバイス：</strong>{showDetail.gradeAdvice}
+                  </div>
+                  <div style={{ marginTop: 8, color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
+                    ※内申点は165点満点（5教科×5＋実技4教科×5×1.5）。成績の目安は参考値です。
+                  </div>
+                </div>
+
+                {/* 🏆 Highlights */}
+                <div style={{ marginBottom: 20 }}>
+                  <h3 style={{ color: "#f7b731", fontSize: 15, fontWeight: 700, marginBottom: 12, fontFamily: "'Zen Maru Gothic',sans-serif" }}>🏆 この学校の活躍・特色</h3>
+                  {showDetail.highlights.map((h, i) => (
+                    <div key={i} style={{ padding: "10px 0", color: "rgba(255,255,255,0.85)", fontSize: 13, lineHeight: 1.6, borderBottom: i < showDetail.highlights.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>{h}</div>
+                  ))}
+                </div>
+
+                {/* 🎬 YouTube */}
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(showDetail.youtubeQuery)}`} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: "16px", borderRadius: 14, background: "rgba(255,0,0,0.1)", border: "1px solid rgba(255,0,0,0.25)", textDecoration: "none", marginBottom: 20, textAlign: "center" }}>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>▶️</div>
+                  <div style={{ color: "#ff6b6b", fontSize: 15, fontWeight: 700, fontFamily: "'Zen Maru Gothic',sans-serif" }}>YouTubeで学校の動画を見る</div>
+                  <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 4 }}>「{showDetail.youtubeQuery}」の検索結果を表示します</div>
+                </a>
+
+                {/* 🏠 Dormitory */}
+                <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 14, padding: 16, marginBottom: 20, border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <h3 style={{ color: "#f7b731", fontSize: 14, fontWeight: 700, marginBottom: 10, fontFamily: "'Zen Maru Gothic',sans-serif" }}>🏠 住まい情報</h3>
+                  {showDetail.dormitory ? (
+                    <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.8 }}>
+                      <div>🔹 学校寮: <strong style={{ color: "#fff" }}>{showDetail.dormitory.name}</strong></div>
+                      <div>🔹 定員: {showDetail.dormitory.capacity ? `${showDetail.dormitory.capacity}名` : "要確認"}</div>
+                      <div>🔹 寮費: {showDetail.dormitory.cost}</div>
+                      {showDetail.muraboshi && <div style={{ marginTop: 4 }}>⭐ 群星寮からも通学可能</div>}
+                    </div>
+                  ) : showDetail.muraboshi ? (
+                    <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.8 }}>
+                      <div>⭐ <strong style={{ color: "#f7b731" }}>群星寮</strong>から通学できます</div>
+                      <div>🔹 定員120名 / 月額約37,300円</div>
+                    </div>
+                  ) : (
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>学校に直接お問い合わせください</div>
+                  )}
+                </div>
+
+                {/* Match reasons */}
+                {showDetail.match.reasons.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <h3 style={{ color: "#2ec4b6", fontSize: 14, fontWeight: 700, marginBottom: 10, fontFamily: "'Zen Maru Gothic',sans-serif" }}>✨ オススメの理由</h3>
+                    {showDetail.match.reasons.map((r, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", color: "rgba(255,255,255,0.8)", fontSize: 13, borderBottom: i < showDetail.match.reasons.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                        <span style={{ color: "#2ec4b6" }}>✓</span> {r}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showDetail.url && (
+                  <a href={showDetail.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", padding: 14, borderRadius: 14, background: "linear-gradient(135deg,#2ec4b6,#17a398)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", fontFamily: "'Noto Sans JP',sans-serif" }}>学校の公式サイトを見る 🔗</a>
+                )}
+              </div>
+              <button onClick={() => transition(() => setShowDetail(null))} style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Noto Sans JP',sans-serif" }}>← 一覧にもどる</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
