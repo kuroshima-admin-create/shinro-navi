@@ -612,10 +612,10 @@ window.App = function App() {
     if (q.multi && (!answers[q.id] || answers[q.id].length === 0)) return;
     if (!q.multi && !answers[q.id]) return;
     if (currentQ < QUESTIONS.length - 1) transition(() => setCurrentQ(p => p + 1));
-    else { const s = SCHOOLS.map(s => ({ ...s, match: calculateMatch(s, answers) })).sort((a, b) => b.match.percentage - a.match.percentage); transition(() => { setResults(s); setScreen("result"); }); }
+    else { const s = SCHOOLS.map(s => ({ ...s, match: calculateMatch(s, answers) })).sort((a, b) => b.match.percentage - a.match.percentage); transition(() => { setResults(s); setScreen("result"); window.scrollTo(0,0); }); }
   };
   const prevQuestion = () => { if (currentQ > 0) transition(() => setCurrentQ(p => p - 1)); };
-  const restart = () => transition(() => { setScreen("welcome"); setCurrentQ(0); setAnswers({}); setResults([]); setShowDetail(null); });
+  const restart = () => transition(() => { setScreen("welcome"); window.scrollTo(0,0); setCurrentQ(0); setAnswers({}); setResults([]); setShowDetail(null); });
 
   useEffect(() => { if (ref.current) ref.current.scrollTo({ top: 0, behavior: "smooth" }); }, [screen, currentQ, showDetail]);
 
@@ -656,7 +656,7 @@ window.App = function App() {
                 <div style={{ marginBottom: 6 }}>🎬 <strong>YouTube動画</strong>で学校の雰囲気を確認！</div>
                 <div>🏆 各校の<strong>活躍・ハイライト</strong>を紹介！</div>
               </div>
-              <button onClick={() => transition(() => setScreen("quiz"))} style={{ background: "linear-gradient(135deg,#2ec4b6,#17a398)", color: "#fff", border: "none", borderRadius: 60, padding: "16px 48px", fontSize: 18, fontWeight: 700, fontFamily: "'Zen Maru Gothic',sans-serif", cursor: "pointer", boxShadow: "0 4px 24px rgba(46,196,182,0.4)", transition: "transform 0.2s" }} onMouseEnter={e => e.target.style.transform = "scale(1.05)"} onMouseLeave={e => e.target.style.transform = "scale(1)"}>診断スタート 🚀</button>
+              <button onClick={() => transition(() => setScreen("quiz"); window.scrollTo(0,0))} style={{ background: "linear-gradient(135deg,#2ec4b6,#17a398)", color: "#fff", border: "none", borderRadius: 60, padding: "16px 48px", fontSize: 18, fontWeight: 700, fontFamily: "'Zen Maru Gothic',sans-serif", cursor: "pointer", boxShadow: "0 4px 24px rgba(46,196,182,0.4)", transition: "transform 0.2s" }} onMouseEnter={e => e.target.style.transform = "scale(1.05)"} onMouseLeave={e => e.target.style.transform = "scale(1)"}>診断スタート 🚀</button>
               <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 24 }}>竹富町立黒島中学校 進路支援アプリ</p>
             </div>
           )}
